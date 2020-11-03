@@ -1,4 +1,4 @@
-# Learning Hybrid Control Barrier Functions from Data - Bouncing Ball Case Study
+# Learning HCBFs from Data - Bouncing Ball Case Study
 
 Code for the bouncing ball case study in "Learning Hybrid Control Barrier Functions from Data".
 
