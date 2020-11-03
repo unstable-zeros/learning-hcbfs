@@ -5,8 +5,8 @@ Code for the bouncing ball case study in "Learning Hybrid Control Barrier Functi
 ## Getting Started
 
 1. Simply run the blocks top-down to reproduce our results
-2. Upload the training data: [X_train_cts.npy](https://github.com/unstable-zeros/learning-hcbfs/blob/main/bouncing_ball_for_share/data/X_train_cts.npy), [U_train_cts.npy](https://github.com/unstable-zeros/learning-hcbfs/blob/main/bouncing_ball_for_share/data/U_train_cts.npy) in the [data](https://github.com/unstable-zeros/learning-hcbfs/tree/main/bouncing_ball_for_share/data) folder (optional)
-3. Upload the learned HCBF: [params.npy](https://github.com/unstable-zeros/learning-hcbfs/tree/main/bouncing_ball_for_share/network) in the [network](https://github.com/unstable-zeros/learning-hcbfs/tree/main/bouncing_ball_for_share/network) folder (optional)
+2. Load the training data: [X_train_cts.npy](https://github.com/unstable-zeros/learning-hcbfs/blob/main/bouncing_ball_for_share/data/X_train_cts.npy), [U_train_cts.npy](https://github.com/unstable-zeros/learning-hcbfs/blob/main/bouncing_ball_for_share/data/U_train_cts.npy) in the [data](https://github.com/unstable-zeros/learning-hcbfs/tree/main/bouncing_ball_for_share/data) folder (optional)
+3. Load the learned HCBF: [params.npy](https://github.com/unstable-zeros/learning-hcbfs/tree/main/bouncing_ball_for_share/network) in the [network](https://github.com/unstable-zeros/learning-hcbfs/tree/main/bouncing_ball_for_share/network) folder (optional)
 
 
 ### Prerequisites
