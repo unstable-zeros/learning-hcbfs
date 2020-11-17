@@ -31,3 +31,58 @@ To collect expert trajectories using the compass gait walker, you can run the fo
 chmod +x collect_data.sh
 ./collect_data.sh
 ```
+
+To select the path dame of the dataset to be saved, you can edit the following environmental variables:
+
+```bash
+export SAVE_DATA_PATH=./
+export DATASET_NAME=rollouts.pkl
+```
+
+### Selecting a method for collecting expert rollouts
+
+There are two different kinds of rollouts that can be collected: rollouts from i.i.d. initial conditions (denoted by 'iid') and perturbed rollouts, where we collect a rollout from one initial condition and then perturb the control actions used in this first rollout.  This second option is denoted by 'pert'.  
+
+```bash
+export ROLLOUT_TYPE='pert'
+```
+
+In the results in our paper, we used the 'pert' setting to collect 100 iid rollouts, and we generated four perturbed copies for each of these rollouts.  To set the number of rollouts that are collected, you can use the following variables.  For example, in the paper we used:
+
+```bash
+export N_ROLLOUTS=100
+export N_PERTURB_ROLLOUTS=4
+```
+
+### Parameters for each expert rollout
+
+To set the time step Δt and the horizon for each rollout, you can set:
+
+```bash
+export HORIZON=750
+export DELTA_T=0.01
+```
+
+Both of these values are the ones that we used in the paper. 
+
+Finally, in each rollout, the number of steps taken by the walker is our main metric of how well the walker performs.  Thus, to define an expert trajectory, we use a threshold based on the number of steps taken by the expertly-controlled walker.  That is, we only save expert trajectories in which the walker travels more than or equal to a fixed number of steps.  To adjust this number of steps, you can set:
+
+```bash
+export SUCCESS_N_STEPS=8
+```
+
+For these settings for `HORIZON`, `DELTA_T`, and `SUCCESS_N_STEPS`, the walker will travel between 0 and 11 steps.  
+ 
+
+### Selecting an expert controller
+
+You can also select a particular form of the expert controller.  We have provided three options: 'energy', which creates an energy-based controller from Spong et al. (1997), 'zero': which creates a controller that always returns zero, and 'noisy', which creates a controller that returns random noise.
+
+```bash
+export NOMINAL_CTRL='energy'
+```
+
+In our paper, we used the 'energy' controller.
+
+
+## Training a hybrid control barrier function
