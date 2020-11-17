@@ -159,4 +159,14 @@ As the HCBF trains, a figure showing the current loss and constraint satisfactio
 
 ![training losses](assets/train.png)
 
-After training completes, the program will look for a trajectory for which the 
+After training completes, the program will look for a trajectory for which the zero-controller (which serves as the nominal controller for the HCBF controller) fails, but the HCBF controller succeeds.  For this trajectory, we plot the values of the HCBF over the passive limit cycle.
+
+<p align='center'>
+  <img src="assets/phase.png" alt="drawing" width="300"/>
+</p>
+
+Finally, the program will use the energy-based and HCBF controllers to collect rollouts from 1000 different initial conditions.  These intiial conditions will be plotted based on whether the walker succeeded or failed.  We also plot various level sets of the learned HCBF.
+
+<p align='center'>
+  <img src="assets/final-ics.png" alt="drawing" width="500">
+</p>
