@@ -86,3 +86,69 @@ In our paper, we used the 'energy' controller.
 
 
 ## Training a hybrid control barrier function
+
+To train a hybrid control barrier function (HCBF) from expert trajectories, you can run the following bash script:
+
+```bash
+chmod +x train.sh
+./train.sh
+```
+
+To select the dataset (which can be obtained by running `collect_data.sh`), you can set
+
+```bash
+export TRAINING_DATA=./{my-dataset-name}.pkl
+```
+
+You can also select the number of rollouts to use from this dataset by setting the following:
+
+```bash
+export N_TRAIN_ROLLOUTS=500
+```
+
+Further, you can set the path to which all of the output data and figures will be saved to by setting the following path:
+
+```bash
+export RESULTS_DIR=./results
+```
+
+### Hyperparameters and architecture selection
+
+You can set the dimensions of the neural network using the following flag:
+
+```bash
+export NET_DIMS=(4 32 16 1)
+```
+
+This flag must be a tuple of integers; the first integer must be 4 (equal to the dimension of the state) and the last integer must be 1 (as hybrid control barrier functions are real-valued).  The other integers represent the sizes of the intermediate layers in the feed-forward neural network architecture for h(x).
+
+To set the number of training epochs, you can set:
+
+```bash
+export N_EPOCHS=30000
+```
+
+To set any of the hyperparameters discussed in the text, you can set:
+
+```bash
+# Lagrange multipliers/coefficients
+export LAMBDA_SAFE=5.0          # eq. 9a
+export LAMBDA_UNSAFE=10.0       # eq. 9b
+export LAMBDA_CONT=0.2          # eq. 9d
+export LAMBDA_DISCRETE=0.2      # eq. 9f
+export LAMBDA_GRAD=0.01
+export LAMBDA_PARAM=1.0
+
+# Loss margin hyperparameters
+export GAMMA_SAFE=0.3           # eq. 9a
+export GAMMA_UNSAFE=0.3         # eq. 9b
+export GAMMA_CONT=0.05          # eq. 9d
+export GAMMA_DISCRETE=0.05      # eq. 9f
+```
+
+Finally, you can set the parameters used for the NUTS neighbor sampling algorithm used to identify boundary states by setting the following:
+
+```bash
+export MIN_NUM_NBRS=200
+export NBR_THRESH=0.04
+```
