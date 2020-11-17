@@ -1,5 +1,11 @@
 # Compass gait case study
 
+<figure class="video_container">
+  <video controls="true" allowfullscreen="true">
+    <source src="assets/out-cbf.mp4" type="video/mp4">
+  </video>
+</figure>
+
 This repository contains the code necessary for reproducing the experiment concerning the compass gait walker in our recent paper **Learning Hybrid Control Barrier Functions From Data**, which appeared at CORL 2020.  If you find this code useful in your own research, please consider citing:
 
 ```latex
@@ -152,3 +158,11 @@ Finally, you can set the parameters used for the NUTS neighbor sampling algorith
 export MIN_NUM_NBRS=200
 export NBR_THRESH=0.04
 ```
+
+### Figures
+
+As the HCBF trains, a figure showing the current loss and constraint satisfaction rates will be saved in the `RESULTS_DIR` directory.  This should look something like the following:
+
+![training losses](assets/train.png)
+
+After training completes, the program will look for a trajectory for which the 
