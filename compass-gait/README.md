@@ -1,10 +1,10 @@
 # Compass gait case study
 
-<figure class="video_container">
-  <video controls="true" allowfullscreen="true">
-    <source src="assets/out-cbf.mp4" type="video/mp4">
-  </video>
-</figure>
+<video width="320" height="240" controls>
+  <source src="assets/hcbf.mp4" type="video/mp4">
+</video>
+
+![video](assets/hcbf.mp4)
 
 This repository contains the code necessary for reproducing the experiment concerning the compass gait walker in our recent paper **Learning Hybrid Control Barrier Functions From Data**, which appeared at CORL 2020.  If you find this code useful in your own research, please consider citing:
 
