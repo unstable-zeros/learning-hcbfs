@@ -37,7 +37,7 @@ def main():
 
     # make plots
     phase_portrait(learned_h, safe_ctrl, no_ctrl, args)
-    heatmap(safe_ctrl, energy_ctrl, learned_h, args, n_trials=5)
+    heatmap(safe_ctrl, energy_ctrl, learned_h, args, n_trials=1000)
 
 
 def train_hcbf(dataset, net, args):
