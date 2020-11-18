@@ -4,3 +4,7 @@ Code needed to replicate the examples from "[Learning Hybrid Control Barrier Fun
 Code for the bouncing ball case study can be found [here](https://github.com/unstable-zeros/learning-hcbfs/tree/main/bouncing_ball_for_share).
 
 Code for the compass gait case study can be found [here](https://github.com/unstable-zeros/learning-hcbfs/tree/main/compass-gait).
+
+<p align='center'>
+    <img src="compass-gait/assets/safe-hcbf.gif">
+</p>
