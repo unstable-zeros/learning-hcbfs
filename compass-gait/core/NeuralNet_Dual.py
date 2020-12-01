@@ -24,7 +24,7 @@ class NeuralNet:
         self.dyn = Dynamics()
         self.opt_name = opt_name
         self._init_optimizer(opt_kwargs)
-        self.dual_vars = self._init_dual_variables(verbose=False)
+        self.dual_vars = self._init_dual_variables(verbose=True)
         self.dual_step_size = 0.05
 
         self.key = jrandom.PRNGKey(5433)
@@ -53,17 +53,20 @@ class NeuralNet:
 
         return self.opt_update(epoch, grads, opt_state)
 
-    @partial(jax.jit, static_argnums=0)
+    # @partial(jax.jit, static_argnums=0)
     def dual_step(self, params, dataset):
 
-        # def dual_update(name):
-        #     self.dual_vars[f'λ_{name}'] += self.dual_step_size * losses[f'{name}']
+        _, _, diffs = self.loss_and_constraints(params, dataset)
 
-        _, _, losses = self.loss_and_constraints(params, dataset)
-        self.dual_vars['λ_safe'] += self.dual_step_size * losses['safe']
-        self.dual_vars['λ_unsafe'] += self.dual_step_size * losses['unsafe']
-        self.dual_vars['λ_cnt'] += self.dual_step_size * losses['cnt']
-        self.dual_vars['λ_dis'] += self.dual_step_size * losses['dis']
+        def dual_update(name):
+            dv = self.dual_vars[f'λ_{name}']
+            const = diffs[name]
+            return jnn.relu(dv + self.dual_step_size * jnp.sum(const) / const.shape[0])
+
+        self.dual_vars['λ_safe'] = dual_update('safe')
+        self.dual_vars['λ_unsafe'] = dual_update('unsafe')
+        self.dual_vars['λ_cnt'] = dual_update('cnt')
+        self.dual_vars['λ_dis'] = dual_update('dis')
 
     @partial(jax.jit, static_argnums=0)
     def loss(self, params, dataset):
@@ -143,7 +146,7 @@ class NeuralNet:
             self.dual_vars['λ_cnt'] * continuous_loss +
             self.dual_vars['λ_dis'] * discrete_loss +
             self.dual_vars['λ_grad'] * dh_loss +
-            self.dual_vars['λ_params'] * param_loss
+            self.dual_vars['λ_param'] * param_loss
         )
 
         all_const_pcts = {
@@ -153,14 +156,14 @@ class NeuralNet:
             'disc': disc_const_pct,
         }
 
-        all_losses = {
-            'safe': safe_loss,
-            'unsafe': unsafe_loss,
-            'cnt': continuous_loss,
-            'dis': discrete_loss
+        all_diffs = {
+            'safe': x_safe_diff,
+            'unsafe': x_unsafe_diff,
+            'cnt': cnt_diff,
+            'dis': disc_diff
         }
 
-        return total_loss, all_const_pcts, all_losses
+        return total_loss, all_const_pcts, all_diffs
 
     def cbf_term_indiv(self, x, params):
         """Calculates the LHS of the CBF inequality term (without the sup)
