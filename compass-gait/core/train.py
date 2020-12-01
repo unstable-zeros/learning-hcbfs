@@ -3,7 +3,9 @@ import jax.numpy as jnp
 import jax
 import os
 
-from NeuralNet import NeuralNet
+# from NeuralNet import NeuralNet
+from NeuralNet_Dual import NeuralNet 
+
 from cg_dynamics.compass_gait import Dynamics
 from collect_data import get_starting_state, replay_rollout
 from make_ctrls import get_energy_controller, get_zero_controller, make_safe_controller
@@ -28,7 +30,7 @@ def main():
     else:
         # train HCBF using expert trajectories
         dataset = kdtree_load_data(args)
-        learned_h = train_hcbf(dataset, net, args)
+        learned_h = train_hcbf_primal_dual(dataset, net, args)
 
     # make nominal and safe HCBF-QP controllers
     energy_ctrl = get_energy_controller()
@@ -63,6 +65,55 @@ def train_hcbf(dataset, net, args):
         # update loss tracker
         loss_tracker.update(loss, n=1)
 
+        # do one step of optimization
+        opt_state = net.step(epoch_idx, opt_state, dataset)
+        
+        if epoch_idx % args.report_int == 0:
+            print(f'[Epoch: {epoch_idx}/{args.n_epochs}]', end=' ')
+            print(f'[Loss: {loss_tracker.val:.3f}]')
+            print(f'\t[Safe pct: {consts["safe"]:.3f}]', end=' ')
+            print(f'[Unsafe pct: {consts["unsafe"]:.3f}]', end=' ')
+            print(f'[Continuous pct: {consts["cnt"]:.3f}]', end=' ')
+            print(f'[Discrete pct: {consts["disc"]:.3f}]\n')
+            h_safe = net(dataset['x_cts'], params)
+            h_unsafe = net(dataset['x_unsafe'], params)
+            saver.update(epoch_idx, loss, consts, h_safe, h_unsafe)
+            saver.plot()
+
+    # define learned HCBF as python function
+    final_params = net.get_params(opt_state)
+    learned_h = lambda x: net.forward_indiv(x, final_params)
+
+    # save parameters of trained network to file
+    fname = os.path.join(args.results_dir, 'trained_hcbf.npy')
+    jnp.save(fname, final_params)
+
+    return learned_h
+
+def train_hcbf_primal_dual(dataset, net, args):
+    """Train a hybrid control barrier function.
+    
+    Params:
+        dataset: Dataset of trajectories.
+    """
+
+    params = net.init_params(verbose=True)
+
+    opt_state = net.opt_init(params)
+
+    loss_tracker = AverageMeter('loss', fmt='.3f')
+    saver = Saver(args)
+
+    for epoch_idx in range(1, args.n_epochs + 1):
+        params = net.get_params(opt_state)
+        
+        # compute loss and update tracker
+        loss = net.loss(params, dataset)
+        consts = net.constraints(params, dataset)
+
+        # update loss tracker
+        loss_tracker.update(loss, n=1)
+        
         # do one step of optimization
         opt_state = net.step(epoch_idx, opt_state, dataset)
         
