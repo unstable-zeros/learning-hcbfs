@@ -9,7 +9,7 @@ export RESULTS_DIR=./results
 
 # architecture and training hyperparameters
 export NET_DIMS=(4 32 16 1)
-export N_EPOCHS=100
+export N_EPOCHS=30000
 
 # Lagrange multipliers/coefficients
 export LAMBDA_SAFE=5.0
