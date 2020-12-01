@@ -48,6 +48,7 @@ class Saver:
         self.safe_pct, self.unsafe_pct, self.cnt_pct, self.dis_pct = ([] for _ in range(4))
         self.safe_hvals, self.unsafe_hvals = None, None
         self.consts_df_path, self.box_df_path = consts_df_path, box_df_path
+        self.safe_dv, self.unsafe_dv, self.cnt_dv, self.dis_dv = ([] for _ in range(4))
 
         self.root = os.path.join(args.results_dir, 'training')
         os.makedirs(self.root, exist_ok=True)
@@ -56,21 +57,23 @@ class Saver:
         """Plot constraint satisfaction, training loss, and boxplot."""
 
         df = self.to_dataframe()
+        dual_df = self.to_dual_df()
 
         sns.set_style('whitegrid')
         sns.set(font_scale=1.2)
         
-        fig, (ax1, ax2, ax3) = plt.subplots(ncols=3, figsize=(14, 5))
+        fig, (ax1, ax2, ax3, ax4) = plt.subplots(ncols=4, figsize=(14, 5))
         self.plot_consts(ax1, df)
         self.plot_loss(ax2, df)
-        self.plot_boxplot(ax3)
+        self.plot_dual_vars(ax3, dual_df)
+        self.plot_boxplot(ax4)
 
         fname = os.path.join(self.args.results_dir, 'train.png')
         plt.savefig(fname)
         plt.tight_layout()
         plt.close(fig)
 
-    def update(self, epoch, loss, constraints, safe_hvals, unsafe_hvals):
+    def update(self, epoch, loss, constraints, safe_hvals, unsafe_hvals, dual_vars=None):
         """Update training statistics and lists."""
 
         self.epochs.append(epoch)
@@ -81,6 +84,13 @@ class Saver:
         self.dis_pct.append(float(constraints['disc']))
         self.safe_hvals = safe_hvals
         self.unsafe_hvals = unsafe_hvals
+
+        if dual_vars is not None:
+    
+            self.safe_dv.append(float(dual_vars['λ_safe']))
+            self.unsafe_dv.append(float(dual_vars['λ_unsafe']))
+            self.cnt_dv.append(float(dual_vars['λ_cnt']))
+            self.dis_dv.append(float(dual_vars['λ_dis']))
 
     def to_dataframe(self):
         """Convert saved data to dataframe (for plotting)"""
@@ -100,6 +110,15 @@ class Saver:
 
         return df
 
+    def to_dual_df(self):
+
+        data = list(zip(self.epochs, self.safe_dv, self.unsafe_dv, 
+            self.cnt_dv, self.dis_dv))
+        cols = ['Epoch', 'λ_safe', 'λ_unsafe', 'λ_cnt', 'λ_dis']
+        df = pd.DataFrame(data, columns=cols)
+
+        return df
+
     def plot_loss(self, ax, df):
         kwargs = {'x': 'Epochs', 'linewidth': 3, 'data': df, 'ax': ax}
         sns.lineplot(y='Loss', **kwargs)
@@ -116,6 +135,17 @@ class Saver:
         ax.set_ylabel('Constraint satisfaction percentage')
         ax.set_title('Constraint satisfaction')
         ax.legend(loc='lower right')
+
+    def plot_dual_vars(self, ax, df):
+
+        kwargs = {'x': 'Epoch', 'linewidth': 3, 'data': df, 'ax': ax}
+        sns.lineplot(y='λ_safe', label='λ_safe', **kwargs)
+        sns.lineplot(y='λ_unsafe', label='λ_unsafe', **kwargs)
+        sns.lineplot(y='λ_cnt', label='λ_cnt', **kwargs)
+        sns.lineplot(y='λ_dis', label='λ_dis', **kwargs)
+        ax.set_ylabel('Values of dual variables')
+        ax.set_title('Dual variables')
+        ax.legend()
 
     def plot_boxplot(self, ax):
 
