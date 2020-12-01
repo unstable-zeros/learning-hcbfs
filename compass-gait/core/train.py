@@ -38,7 +38,7 @@ def main():
     safe_ctrl = make_safe_controller(no_ctrl, learned_h)
 
     # make plots
-    phase_portrait(learned_h, safe_ctrl, no_ctrl, args)
+    # phase_portrait(learned_h, safe_ctrl, no_ctrl, args)
     heatmap(safe_ctrl, energy_ctrl, learned_h, args, n_trials=1000)
 
 
@@ -116,6 +116,7 @@ def train_hcbf_primal_dual(dataset, net, args):
         
         # do one step of optimization
         opt_state = net.step(epoch_idx, opt_state, dataset)
+        net.dual_step(params, dataset)
         
         if epoch_idx % args.report_int == 0:
             print(f'[Epoch: {epoch_idx}/{args.n_epochs}]', end=' ')
@@ -126,7 +127,8 @@ def train_hcbf_primal_dual(dataset, net, args):
             print(f'[Discrete pct: {consts["disc"]:.3f}]\n')
             h_safe = net(dataset['x_cts'], params)
             h_unsafe = net(dataset['x_unsafe'], params)
-            saver.update(epoch_idx, loss, consts, h_safe, h_unsafe)
+            saver.update(epoch_idx, loss, consts, h_safe, h_unsafe, 
+                            dual_vars=net.dual_vars)
             saver.plot()
 
     # define learned HCBF as python function
