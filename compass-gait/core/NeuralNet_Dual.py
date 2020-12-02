@@ -53,7 +53,6 @@ class NeuralNet:
 
         return self.opt_update(epoch, grads, opt_state)
 
-    # @partial(jax.jit, static_argnums=0)
     def dual_step(self, params, dataset):
 
         _, _, diffs = self.loss_and_constraints(params, dataset)
@@ -113,20 +112,17 @@ class NeuralNet:
 
         # Goal: enforce constraint on unsafe/boundary points
         #       h(x) <= -\gamma_unsafe      \forall boundary states
-        # x_unsafe_diff = forward(dataset['x_unsafe']) + self.hyperparams['gamma_unsafe']
         x_unsafe_diff = forward(dataset['x_unsafe']) + self.args.gam_unsafe
         unsafe_loss = soft_constraint(x_unsafe_diff)
         unsafe_const_pct = hard_constraint_pct(x_unsafe_diff)
 
         # Goal: enforce the continuous state constraint with L_inf bound on actions
-        # cnt_diff = self.hyperparams['gamma_cnt'] - curr_cbf(dataset['x_cts'])
         cnt_diff = self.args.gam_cnt - curr_cbf(dataset['x_cts'])
         continuous_loss = soft_constraint(cnt_diff)
         cnt_const_pct = hard_constraint_pct(cnt_diff)
 
         # Goal: enforce the discrete state constraint
         #       sup_{u_d \in U_d} h(f_d(z) + g_d(z)u_d) >= 0
-        # disc_diff = self.hyperparams['gamma_dis'] - forward(dataset['x_dis_minus'])
         disc_diff = self.args.gam_dis - forward(dataset['x_dis_minus'])
         discrete_loss = soft_constraint(disc_diff)
         disc_const_pct = hard_constraint_pct(disc_diff)
