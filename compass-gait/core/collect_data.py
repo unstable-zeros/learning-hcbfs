@@ -103,7 +103,8 @@ def test_ctrls(ctrls, num_trials, args):
             'success': [n > args.success_n_steps for n in steps]}
     
     results = []
-    for _ in range(num_trials):
+    for idx in range(num_trials):
+        print(f'Current index is {idx}')
         ic = get_starting_state(args)
 
         steps = []
