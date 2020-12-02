@@ -91,15 +91,15 @@ def plot_chunks(x_cts, outliers, args):
 
         if ch_idx == 0:
             ax.set_title(f'$\dot \\theta \leq$ {bins[ch_idx]:.2f}')
-            print(f'Chunk: Vel_swing <= {bins[ch_idx]:.2f}', end='')
+            # print(f'Chunk: Vel_swing <= {bins[ch_idx]:.2f}', end='')
         elif ch_idx == len(bins) - 1:
             ax.set_title(f'{bins[ch_idx]:.2f} $\leq \dot \\theta$')
-            print(f'Chunk: {bins[ch_idx]:.2f} <= Vel_swing', end='')
+            # print(f'Chunk: {bins[ch_idx]:.2f} <= Vel_swing', end='')
         else:
             ax.set_title(f'{bins[ch_idx-1]:.2f} $\leq \dot \\theta$$\leq$ {bins[ch_idx]:.2f}')
-            print(f'Chunk: {bins[ch_idx-1]:.2f} <= Vel_swing <= {bins[ch_idx]:.2f}', end='')
+            # print(f'Chunk: {bins[ch_idx-1]:.2f} <= Vel_swing <= {bins[ch_idx]:.2f}', end='')
 
-        print('  ', in_data[0].shape, out_data[0].shape)
+        # print('  ', in_data[0].shape, out_data[0].shape)
 
     save_path = os.path.join(args.results_dir, 'outlier_chunks.png')
     plt.savefig(save_path)
