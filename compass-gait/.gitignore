@@ -1,4 +1,5 @@
 results/
+experiments/
 __pycache__/
 *.pkl
 *.npy
