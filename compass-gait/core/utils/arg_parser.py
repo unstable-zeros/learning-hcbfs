@@ -67,7 +67,7 @@ def get_parser():
                             help='Number of steps taken to entail a success')
 
     # other
-    parser.add_argument('--report-int', type=int, default=100,
+    parser.add_argument('--report-int', type=int, default=10,
                             help='Print frequency (per epoch) for training')
     parser.add_argument('--reload', action='store_true',
                             help='Reloads neural network from file if argument is provided.')
