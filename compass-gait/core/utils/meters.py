@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import pickle
 import os
+from jax.numpy.linalg import norm as jnorm
 
 class AverageMeter(object):
     
@@ -86,11 +87,14 @@ class Saver:
         self.unsafe_hvals = unsafe_hvals
 
         if dual_vars is not None:
-    
-            self.safe_dv.append(float(dual_vars['λ_safe']))
-            self.unsafe_dv.append(float(dual_vars['λ_unsafe']))
-            self.cnt_dv.append(float(dual_vars['λ_cnt']))
-            self.dis_dv.append(float(dual_vars['λ_dis']))
+
+            def to_float(name):
+                return float(jnorm(dual_vars[f'λ_{name}'], ord=2))
+
+            self.safe_dv.append(to_float('safe'))
+            self.unsafe_dv.append(to_float('unsafe'))
+            self.cnt_dv.append(to_float('cnt'))
+            self.dis_dv.append(to_float('dis'))
 
     def to_dataframe(self):
         """Convert saved data to dataframe (for plotting)"""
