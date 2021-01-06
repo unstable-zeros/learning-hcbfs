@@ -10,7 +10,6 @@ from matplotlib.animation import FuncAnimation
 from matplotlib.patches import Arc, RegularPolygon
 from collections import namedtuple
 
-import cg_dynamics.compass_gait as compass_gait
 
 TOLERANCE = 1e-7
 PARAMS = namedtuple('CompassGaitParams',

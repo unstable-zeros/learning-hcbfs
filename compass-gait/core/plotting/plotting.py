@@ -74,7 +74,8 @@ def plot_heatmap(learned_h, results):
 
     c1 = np.where(success[:, 0] == True, '#8db3f0', '#f0698d')
     ax1.scatter(points[:, 0], points[:, 1], color=c1)
-    cntr_plt = ax1.contour(x, y, hvals.T, levels=[-2, -1, 0, 0.25], linewidths=3, colors='k')
+    # cntr_plt = ax1.contour(x, y, hvals.T, levels=[-2, -1, 0, 0.25], linewidths=3, colors='k')
+    cntr_plt = ax1.contour(x, y, hvals.T, 5, linewidths=3, colors='k')
     plt.clabel(cntr_plt, inline=1, fontsize=10)
     ax1.set_title('HCBF controller')
 
@@ -89,3 +90,42 @@ def plot_heatmap(learned_h, results):
         ax.set_ylabel('Swing foot $\dot{\\theta}$')
 
     plt.show()
+
+def plot_heatmap_uncertain(learned_h, learned_h2, df):
+
+    sns.set_style('whitegrid')
+    sns.set(font_scale=0.6, font='Palatino')
+
+    x = np.linspace(-0.3, 0.3, num=50)
+    y = np.linspace(-2.6, -1.40, num=50)
+    hvals1 = jax.vmap(lambda s1: jax.vmap(lambda s2: learned_h(jnp.array([0.0, s1, 0.4, s2])))(y))(x)
+    hvals2 = jax.vmap(lambda s1: jax.vmap(lambda s2: learned_h2(jnp.array([0.0, s1, 0.4, s2])))(y))(x)
+
+    def add_contour(ax, hvals, only_zero=False):
+        levels = [0] if only_zero is True else 5
+        cntr = ax.contour(x, y, hvals.T, levels, colors='k')
+        plt.clabel(cntr, inline=1, fontsize=10)
+
+    def add_all_contours(grid):
+        safe_one_axes, safe_axes, energy_axes, zero_axes = g.axes
+        [add_contour(ax, hvals2, only_zero=False) for ax in safe_one_axes]
+        [add_contour(ax, hvals1, only_zero=False) for ax in safe_axes]
+        [add_contour(ax, hvals1, only_zero=True) for ax in energy_axes]
+        [add_contour(ax, hvals1, only_zero=True) for ax in zero_axes]
+
+    kwargs = {'data': df, 'x': 'Theta_swing', 'y': 'Vel_swing',
+        'row': 'Controller', 'col': 'Hip_mass', 'height': 2.5,
+        'row_order': ['safe-one-expert', 'safe', 'energy', 'zero']}
+    
+    # palette = sns.color_palette("rocket_r", as_cmap=True)
+    g = sns.relplot(hue='Success', **kwargs)
+    add_all_contours(g)
+
+    palette = sns.color_palette('Spectral', 13)
+    g = sns.relplot(hue='Num_steps', palette=palette, **kwargs)
+    add_all_contours(g)
+
+    # plt.tight_layout()
+
+    plt.show()
+    
