@@ -6,7 +6,7 @@ from jax.experimental import optimizers
 from jax.flatten_util import ravel_pytree
 from functools import partial
 
-from cg_dynamics.compass_gait import Dynamics
+from cg_dynamics.dynamics import CG_Dynamics
 
 class NeuralNet:
 
@@ -21,7 +21,8 @@ class NeuralNet:
 
         self.net_dims = net_dims
         self.args = args
-        self.dyn = Dynamics()
+        # self.dyn = Dynamics(params=args.cg_params)
+        self.dyn = CG_Dynamics(args.cg_params)
         self.opt_name = opt_name
         self._init_optimizer(opt_kwargs)
         self.dual_step_size = 0.05
@@ -58,7 +59,7 @@ class NeuralNet:
         def dual_update(name):
             dv = self.dual_vars[f'λ_{name}']
             consts = diffs[name]
-            return  jnn.relu(dv + (self.dual_step_size / consts.shape[0]) * consts)
+            return  jnn.relu(dv + (self.dual_step_size) * consts)
 
         self.dual_vars['λ_safe'] = dual_update('safe')
         self.dual_vars['λ_unsafe'] = dual_update('unsafe')

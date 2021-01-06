@@ -139,8 +139,8 @@ class NeuralNet:
         return total_loss, all_consts
 
     def cbf_term_indiv(self, x, params):
-        """Calculates the LHS of the CBF inequality term (without the sup)
-                (dh/dx)f(x) + (dh/dx)g(x)u + alpha(h(x))
+        """Calculates the LHS of the CBF inequality term
+                (dh/dx)f(x) + sup_u (dh/dx)g(x)u + alpha(h(x))
         Args:
             x: State input to neural network.
             params: Learnable parameters of neural network.

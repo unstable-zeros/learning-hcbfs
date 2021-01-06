@@ -6,7 +6,7 @@ from jax.experimental import optimizers
 from jax.flatten_util import ravel_pytree
 from functools import partial
 
-from cg_dynamics.compass_gait import Dynamics
+from cg_dynamics.dynamics import CG_Dynamics
 
 class NeuralNet:
 
@@ -21,10 +21,10 @@ class NeuralNet:
 
         self.net_dims = net_dims
         self.args = args
-        self.dyn = Dynamics(params=args.cg_params)
+        # self.dyn = Dynamics(params=args.cg_params)
+        self.dyn = CG_Dynamics(args.cg_params)
         self.opt_name = opt_name
         self._init_optimizer(opt_kwargs)
-        self.dual_vars = self._init_dual_variables(verbose=True)
         self.dual_step_size = 0.05
 
         self.key = jrandom.PRNGKey(5433)
@@ -50,7 +50,6 @@ class NeuralNet:
 
         params = self.get_params(opt_state)
         grads = jax.grad(self.loss, argnums=0)(params, dataset)
-
         return self.opt_update(epoch, grads, opt_state)
 
     def dual_step(self, params, dataset):
@@ -59,8 +58,8 @@ class NeuralNet:
 
         def dual_update(name):
             dv = self.dual_vars[f'λ_{name}']
-            const = diffs[name]
-            return jnn.relu(dv + self.dual_step_size * jnp.sum(const) / const.shape[0])
+            consts = diffs[name]
+            return  jnn.relu(dv + (self.dual_step_size) * consts)
 
         self.dual_vars['λ_safe'] = dual_update('safe')
         self.dual_vars['λ_unsafe'] = dual_update('unsafe')
@@ -96,8 +95,8 @@ class NeuralNet:
         def forward_grad(x):
             return jax.vmap(self.model_grad_indiv, in_axes=(0, None))(x, params)
 
-        def soft_constraint(vect):
-            return jnp.sum(jnn.relu(vect))
+        def soft_constraint(vect, dual_var):
+            return jnp.dot(dual_var, jnn.relu(vect))
 
         def hard_constraint_pct(vect):
             frac_incorrect = jnp.sum(jnp.heaviside(vect, 0)) / vect.shape[0]
@@ -107,24 +106,24 @@ class NeuralNet:
         #       h(z) >= \gamma_safe     \forall cts and dis states
         x_safe = jnp.vstack((dataset['x_cts'], dataset['x_dis_plus']))
         x_safe_diff = self.args.gam_safe - forward(x_safe)
-        safe_loss = soft_constraint(x_safe_diff)
+        safe_loss = soft_constraint(x_safe_diff, self.dual_vars['λ_safe'])
         safe_const_pct = hard_constraint_pct(x_safe_diff)
 
         # Goal: enforce constraint on unsafe/boundary points
         #       h(x) <= -\gamma_unsafe      \forall boundary states
         x_unsafe_diff = forward(dataset['x_unsafe']) + self.args.gam_unsafe
-        unsafe_loss = soft_constraint(x_unsafe_diff)
+        unsafe_loss = soft_constraint(x_unsafe_diff, self.dual_vars['λ_unsafe'])
         unsafe_const_pct = hard_constraint_pct(x_unsafe_diff)
 
         # Goal: enforce the continuous state constraint with L_inf bound on actions
         cnt_diff = self.args.gam_cnt - curr_cbf(dataset['x_cts'])
-        continuous_loss = soft_constraint(cnt_diff)
+        continuous_loss = soft_constraint(cnt_diff, self.dual_vars['λ_cnt'])
         cnt_const_pct = hard_constraint_pct(cnt_diff)
 
         # Goal: enforce the discrete state constraint
         #       sup_{u_d \in U_d} h(f_d(z) + g_d(z)u_d) >= 0
         disc_diff = self.args.gam_dis - forward(dataset['x_dis_minus'])
-        discrete_loss = soft_constraint(disc_diff)
+        discrete_loss = soft_constraint(disc_diff, self.dual_vars['λ_dis'])
         disc_const_pct = hard_constraint_pct(disc_diff)
 
         # Goal: make all derivatives small
@@ -137,10 +136,10 @@ class NeuralNet:
         param_loss = jnp.sum(jnp.square(ravel_pytree(params)[0]))
 
         total_loss = (
-            self.dual_vars['λ_safe'] * safe_loss +
-            self.dual_vars['λ_unsafe'] * unsafe_loss +
-            self.dual_vars['λ_cnt'] * continuous_loss +
-            self.dual_vars['λ_dis'] * discrete_loss +
+            safe_loss +
+            unsafe_loss +
+            continuous_loss +
+            discrete_loss +
             self.dual_vars['λ_grad'] * dh_loss +
             self.dual_vars['λ_param'] * param_loss
         )
@@ -171,20 +170,15 @@ class NeuralNet:
             LHS of control barrier function inequality.
         """
 
-        def abs_l1_smooth(x, mu):
-            return mu * jnp.log(jnp.cosh(x / mu))
-
-        def l1_smoothing_indiv(x, mu):
-            return jnp.sum(abs_l1_smooth(x, mu))
-
         alpha = lambda x: x
         dh = self.model_grad_indiv(x, params)
 
         term1 = jnp.dot(self.dyn.f(x), dh)
         term2 = jnp.linalg.norm(jnp.dot(dh.T, self.dyn.g(x)), ord=1)
         term3 = alpha(self.forward_indiv(x, params))
+        term4 = jnp.linalg.norm(dh) * 0.25
 
-        return term1 + term2 + term3
+        return term1 + term2 + term3 - term4
 
     def model_grad_indiv(self, x, params):
         """Calculate gradient of the NN model h(x) WRT inputs x.
@@ -247,19 +241,30 @@ class NeuralNet:
 
         return params
 
-    def _init_dual_variables(self, verbose=False):
+    def init_dual_variables(self, dataset, verbose=False):
         """Initialize the parameters for the dual variables/Lagrange multipliers."""
 
         names = ['λ_safe', 'λ_unsafe', 'λ_cnt', 'λ_dis', 'λ_grad', 'λ_param']
-        params = dict.fromkeys(names, 1.0)
-        params['λ_grad'] = 0.01     # hack
+        self.dual_vars = dict.fromkeys(names, None)
+
+        def fill_ones(*names):
+            num_states = jnp.vstack((dataset[n] for n  in names)).shape[0]
+            return jnp.ones((num_states,))
+
+        self.dual_vars['λ_safe'] = fill_ones('x_cts', 'x_dis_plus')
+        self.dual_vars['λ_unsafe'] = fill_ones('x_unsafe')
+        self.dual_vars['λ_cnt'] = fill_ones('x_cts')
+        self.dual_vars['λ_dis'] = fill_ones('x_dis_minus')
+        self.dual_vars['λ_grad'] = 0.01     
+        self.dual_vars['λ_param'] = 1.0
 
         if verbose is True:
             print('Dual parameters initialization:')
-            for (name, val) in params.items():
-                print(f'\t * {name} = {val}')
-
-        return params
+            for (name, p) in self.dual_vars.items():
+                if isinstance(p, float):
+                    print(f'\t * {name} = {p}')
+                else:
+                    print(f'\t * {name} has shape {p.shape}')
 
     def _init_optimizer(self, kwargs):
         """Initialized the optimizer based on self.opt_init.
