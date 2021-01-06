@@ -1,4 +1,7 @@
 import argparse
+from munch import Munch
+
+from utils.parser_utils import add_cg_arguments, munch_cg_params
 
 def get_parser():
     """Parse command line arguments and return args namespace."""
@@ -26,7 +29,16 @@ def get_parser():
                             help='Number of perturbed rollouts to collect')
     parser.add_argument('--rollout-type', type=str, choices=['iid', 'pert'], default='iid',
                             help='Kind of rollouts to be collected.')
+    parser.add_argument('--add-state-noise', action='store_true',
+                            help='Adds noise to each state in a rollout.')
+    parser.add_argument('--state-noise-level', type=float, default=0.01,
+                            help='Noise level for state noise')
+
+    # compass gait parameters
+    add_cg_arguments(parser)
 
     args = parser.parse_args()
+    munch_cg_params(args)
+    
 
     return args

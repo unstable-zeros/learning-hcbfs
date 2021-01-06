@@ -1,5 +1,7 @@
 import argparse
 
+from utils.parser_utils import add_cg_arguments, munch_cg_params
+
 def get_parser():
     """Parse command line arguments and return args namespace."""
 
@@ -56,7 +58,6 @@ def get_parser():
                             help='Neighbor threshold for neighbor sampling algorithm')
 
     # compass gait parameters 
-    # (horizon, dt, and fix_left should match those used to collect the training dataset)
     parser.add_argument('--horizon', type=int, default=750,
                             help='Number of steps for each rollout')
     parser.add_argument('--dt', type=float, default=0.01, 
@@ -74,77 +75,9 @@ def get_parser():
     parser.add_argument('--reload-path', type=str, 
                             help='Path to saved neural network parameters file (.npy)')
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-    # # paths to various directories
-    # parser.add_argument('--save-path', type=str, 
-    #                         help='Path for saving outputs')
-    # parser.add_argument('--logdir', default='', type=str,
-    #                         help='Directory for tensorboard logs')
-    # parser.add_argument('--model-paths', type=str, nargs='*',
-    #                         help="Path for model of natural variation")
-    
-    # # optimization settings and training parameters
-    # parser.add_argument('--half-prec', action='store_true', 
-    #                         help='Run model in half-precision mode using apex')
-    # parser.add_argument('--apex-opt-level', default='O1', type=str, 
-    #                         help='opt_level for Apex amp initialization')
-    # parser.add_argument('--weight-decay', '--wd', default=1e-4, type=float, metavar='W', 
-    #                         help='weight decay (default: 1e-4)')
-    # parser.add_argument('--init-bn0', action='store_true', 
-    #                         help='Intialize running batch norm mean to 0')
-    # parser.add_argument('--no-bn-wd', action='store_true', 
-    #                         help='Remove batch norm from weight decay')
-    # parser.add_argument('--momentum', default=0.9, type=float, metavar='M', 
-    #                         help='Momentum for SGD')
-    # parser.add_argument('--data-size', type=int, default=224, 
-    #                         help="Size of each image")
-    # parser.add_argument('--batch-size', type=int, default=256, 
-    #                         help='Training/validation batch size')
-    # parser.add_argument('--delta-dim', type=int, default=2, 
-    #                         help="dimension of nuisance latent space")
-
-    # # architecture
-    # parser.add_argument('--architecture', default='resnet50', type=str, 
-    #                         help='Architecture for classifier')
-    # parser.add_argument('--pretrained', action='store_true', 
-    #                         help='Use pretrained model (only available for torchvision.models)')
-    # parser.add_argument('--num-classes', default=1000, type=int, 
-    #                         help='Number of classes in datset')
-    
-    # # dataset
-    # parser.add_argument('--dataset', required=True, type=str, choices=['imagenet', 'svhn', 'gtsrb', 'cure-tsr'],
-    #                         help='Dataset to use for training/testing classifier.')
-    # parser.add_argument('--source-of-nat-var', type=str, 
-    #                         help='Source of natural variation')
-
-    # # other parameters
-    # parser.add_argument('--print-freq', '-p', default=5, type=int, metavar='N', 
-    #                         help='log/print every this many steps (default: 5)')
-    # parser.add_argument('--resume', default='', type=str, metavar='PATH',
-    #                         help='path to latest checkpoint (default: none)')
-    # parser.add_argument('-e', '--evaluate', dest='evaluate', action='store_true',
-    #                         help='evaluate model on validation set')
-    # parser.add_argument('--short-epoch', action='store_true', 
-    #                         help='make epochs short (for debugging)')
-    # parser.add_argument('--setup-verbose', action='store_true', 
-    #                         help='Print setup messages to console')
-    # parser.add_argument('-j', '--workers', default=8, type=int, metavar='N',
-    #                         help='number of data loading workers (default: 8)')
-    # parser.add_argument('--start-epoch', default=0, type=int, metavar='N',
-    #                         help='manual epoch number (useful on restarts)')
+    add_cg_arguments(parser)
 
     args = parser.parse_args()
+    munch_cg_params(args)
 
     return args
