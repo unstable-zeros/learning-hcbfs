@@ -3,20 +3,22 @@ import jax.numpy as jnp
 from jax.numpy.linalg import norm as jnorm
 import jax
 import os
+import pandas as pd
 
 # from NeuralNet import NeuralNet
 # from NeuralNet_Dual import NeuralNet 
-from NeuralNet_Dual_Indiv import NeuralNet
+# from NeuralNet_Dual_Indiv import NeuralNet
+from NeuralNet_Dual_Indiv_Robust import NeuralNet
 
-from cg_dynamics.compass_gait import Dynamics
 from collect_data import get_starting_state, replay_rollout
 from make_ctrls import get_energy_controller, get_zero_controller, make_safe_controller
 from utils.meters import Saver, AverageMeter
 from utils.arg_parser import get_parser
 from data.load import kdtree_load_data
-from collect_data import test_ctrls, find_success_hcbf
-from plotting.plotting import plot_phase_port, plot_heatmap
+from plotting.plotting import plot_phase_port, plot_heatmap, plot_heatmap_uncertain
 from plotting.movie import make_movie
+from test_noise import test_noise
+from test_mass import test_mass
 
 def main():
 
@@ -24,24 +26,33 @@ def main():
     os.makedirs(args.results_dir, exist_ok=True)
 
     net = NeuralNet(args.neural_net_dims, args, 'Adam', {'step_size': 0.005})
-    
+
     if args.reload is True:
         # load HCBF from file
         loaded_params = jnp.load(args.reload_path, allow_pickle=True)
         learned_h = lambda x: net.forward_indiv(x, loaded_params)
     else:
+        pass
         # train HCBF using expert trajectories
-        dataset = kdtree_load_data(args)
-        learned_h = train_hcbf_primal_dual_indiv(dataset, net, args)
+        # dataset = kdtree_load_data(args)
+        # learned_h = train_hcbf_primal_dual_indiv(dataset, net, args)
+
+    test_mass(learned_h, args)
+    # test_noise(learned_h, args)
 
     # make nominal and safe HCBF-QP controllers
-    energy_ctrl = get_energy_controller()
-    no_ctrl = get_zero_controller()
-    safe_ctrl = make_safe_controller(no_ctrl, learned_h)
+    # energy_ctrl = get_energy_controller(args.cg_params)
+    # no_ctrl = get_zero_controller()
+    # safe_ctrl = make_safe_controller(no_ctrl, learned_h, args.cg_params)
 
     # make plots
     # phase_portrait(learned_h, safe_ctrl, no_ctrl, args)
-    heatmap(safe_ctrl, energy_ctrl, learned_h, args, n_trials=1000)
+
+    # df = heatmap(safe_ctrl, energy_ctrl, learned_h, args, n_trials=5)
+
+    # loaded_params2 = jnp.load('./experiments/Dec-28-Primal-Dual/trained_hcbf.npy', allow_pickle=True)
+    # learned_h2 = lambda x: net.forward_indiv(x, loaded_params2)
+    # plot_heatmap_uncertain(learned_h, learned_h2, df)
 
 def train_hcbf(dataset, net, args):
     """Train a hybrid control barrier function.
@@ -221,14 +232,24 @@ def phase_portrait(learned_h, safe_ctrl, zero_ctrl, args):
 def heatmap(safe_ctrl, energy_ctrl, learned_h, args, n_trials=5):
     """Plot heatmap and save trajectories to pickle file."""
 
-    ctrls = {'safe': safe_ctrl, 'energy': energy_ctrl}
-    results = test_ctrls(ctrls, n_trials, args)
+    ctrls = {'safe-one-expert': safe_ctrl}
+    # results = test_ctrls(ctrls, n_trials, args)
+    # df = test_ctrls_uncertain(ctrls, n_trials, args)
 
-    root = os.path.join(args.results_dir, 'heatmap')
-    os.makedirs(root, exist_ok=True)
+    dfs = [pd.read_pickle(f'results/heatmap/heatmap_rollouts_{i}.pkl') for i in range(4)]
+    orig_df = pd.read_pickle('results/heatmap/heatmap_rollouts.pkl')
+    dfs.append(orig_df)
+    extra_df = pd.read_pickle('results/heatmap/heatmap_rollouts_extra_0.pkl')
+    dfs.append(extra_df)
+    df = pd.concat(dfs, ignore_index=True)
+    df.to_pickle('results/heatmap/heatmap_rollouts-new.pkl')
 
-    save_file(results, os.path.join(root, 'heatmap_rollouts.pkl'))
-    plot_heatmap(learned_h, results)
+    # df = pd.read_pickle('results/heatmap/heatmap_rollouts.pkl')
+    df = df[df['Num_steps'] < 13]
+
+    # plot_heatmap_uncertain(learned_h, df)
+
+    return df
 
 def save_file(traj, fname):
     """Save object to pickle file."""

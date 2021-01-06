@@ -5,10 +5,10 @@ dimensional state x and returns a two-dimensional action."""
 import numpy as np
 import cvxpy as cp
 import jax
+import jax.numpy as jnp
 
 from cg_dynamics.energy_controllers import EnergyBasedController
-from cg_dynamics.compass_gait import Dynamics
-
+from cg_dynamics.dynamics import CG_Dynamics
 def get_zero_controller():
     """Returns a zero controller"""
 
@@ -19,18 +19,18 @@ def get_noisy_contorller():
 
     return lambda state: np.random.uniform(low=-0.5, high=0.5, size=(2,))
 
-def get_energy_controller():
+def get_energy_controller(params):
     """Returns an energy-based controller where the reference energy
     is taken from the passive limit cycle. """
 
-    ctrl = EnergyBasedController(energy_reference=153.244, lam=0.1)
+    ctrl = EnergyBasedController(energy_reference=153.244, lam=0.1, params=params)
     return lambda state: ctrl.get_action(state)
 
-def make_safe_controller(nominal_ctrl, h):
+def make_safe_controller(nominal_ctrl, h, params):
     """Create a safe controller using learned hybrid CBF."""
 
     dh = jax.grad(h, argnums=0)
-    dyn = Dynamics()
+    dyn = CG_Dynamics(params)
 
     def safe_ctrl(x):
         """Solves HCBF-QP to map an input state to a safe action u."""
@@ -46,12 +46,12 @@ def make_safe_controller(nominal_ctrl, h):
         # setup and solve HCBF-QP with CVXPY
         u_mod = cp.Variable(len(u_nom))
         obj = cp.Minimize(cp.sum_squares(u_mod - u_nom))
-        constraints = [np.dot(dh_of_x, f_of_x) + u_mod.T @ np.dot(g_of_x.T, dh_of_x) + h_of_x >= 0]
+        constraints = [jnp.dot(dh_of_x, f_of_x) + u_mod.T @ jnp.dot(g_of_x.T, dh_of_x) + h_of_x >= 0]
         prob = cp.Problem(obj, constraints)
         prob.solve(solver=cp.SCS, verbose=False, max_iters=20000, eps=1e-10)
 
         if prob.status in (cp.OPTIMAL, cp.OPTIMAL_INACCURATE):
             return u_mod.value
-        return np.array([0., 0.])
+        return jnp.array([0., 0.])
 
     return safe_ctrl
