@@ -1,17 +1,6 @@
 import numpy as np
 
-from cg_dynamics.compass_gait import CompassGaitEnv
-
-def setup_env(ic, dt, horizon):
-    """Setup environment and initialize variables for simulation."""
-
-    cg_envir = CompassGaitEnv(dt=dt, horizon=horizon)
-    cg_envir.reset(cg_state=ic)
-    is_done, total_cost, action_seq = False, 0.0, []
-
-    return cg_envir, is_done, total_cost, action_seq
-
-def replay_rollout(init_state, action_seq, dt, horizon, h=None):
+def replay_rollout(init_state, cg_envir, action_seq, noise_seq, h=None):
     """Replay a trajectory to obtain the discrete state transitions.
     
     Params:
@@ -27,7 +16,6 @@ def replay_rollout(init_state, action_seq, dt, horizon, h=None):
             init_state: initial state used.
     """
 
-    cg_envir = CompassGaitEnv(dt=dt, horizon=horizon)
     cg_envir.reset(cg_state=init_state)
 
     # register a switch callback that records the discrete state transitions
@@ -42,10 +30,12 @@ def replay_rollout(init_state, action_seq, dt, horizon, h=None):
     while not is_done:
         if step_index < len(action_seq):
             action = action_seq[step_index]
+            noise = noise_seq[step_index]
         else:
             action = np.array([0., 0.])
+            noise = np.array([0., 0.])
 
-        obs, cost, is_done = cg_envir.step(action)
+        obs, cost, is_done = cg_envir.step(action, noise)
         total_cost += cost
         all_obs.append(obs)
 
@@ -92,7 +82,8 @@ def replay_rollout(init_state, action_seq, dt, horizon, h=None):
         'true_dis_state': np.array(true_dis),
         'n_steps': cg_envir.discrete_state[1],
         'total_cost': total_cost,
-        'action_seq': action_seq
+        'action_seq': action_seq,
+        'noise_seq': noise_seq
     }
     if h is not None:
         return_dict['h_vals'] = np.array(h_vals)

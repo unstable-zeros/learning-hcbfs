@@ -9,29 +9,27 @@ Based on
 import numpy as np
 from collections import namedtuple
 
-import cg_dynamics.compass_gait as compass_gait
+from cg_dynamics.dynamics import CG_Dynamics
 
-PARAMS = namedtuple('CompassGaitParams',
-        ['mass_hip', 'mass_leg', 'length_leg', 'center_of_mass_leg', 'gravity', 'slope'],
-        defaults=[10.0, 5.0, 1.0, 0.5, 9.81, 0.0525])
-TOL = 1e-4
+TOLERANCE = 1e-4
 
-class EnergyBasedController(object):
+class EnergyBasedController:
 
-    def __init__(self, energy_reference, lam, params=PARAMS()):
+    def __init__(self, energy_reference, lam, params):
         self.energy_reference = energy_reference
         self.lam = lam
         self.params = params
+        self.agent = CG_Dynamics(params)
 
     def get_action(self, cg_state):
         # compute the current (relative) energy of the cg_state
-        current_energy = compass_gait.KineticEnergy(cg_state, self.params) + compass_gait.RelativePotentialEnergy(cg_state, self.params)
+        current_energy = self.agent.KineticEnergy(cg_state) + self.agent.RelativePotentialEnergy(cg_state)
         Ediff = current_energy - self.energy_reference
-
-        denom = cg_state[compass_gait._STANCE_VEL] - cg_state[compass_gait._SWING_VEL]
+        _, _, vel_st, vel_sw = cg_state
+        denom = vel_st - vel_sw
         
         # avoid singularity in denominator
-        if np.abs(denom) <= TOL:
+        if np.abs(denom) <= TOLERANCE:
             return np.array([0.0, 0.0])
 
         return np.array([self.lam * Ediff / denom, 0.0])
