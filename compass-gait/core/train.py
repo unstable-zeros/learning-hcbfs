@@ -37,8 +37,14 @@ def main():
         # dataset = kdtree_load_data(args)
         # learned_h = train_hcbf_primal_dual_indiv(dataset, net, args)
 
-    test_mass(learned_h, args)
-    # test_noise(learned_h, args)
+    # test_mass(learned_h, args)
+
+    net2 = NeuralNet(args.neural_net_dims, args, 'Adam', {'step_size': 0.005})
+    path = 'experiments/Jan-5-additive-noise/robust-results/trained_hcbf.npy'
+    loaded_params2 = jnp.load(path, allow_pickle=True)
+    learned_h2 = lambda x: net2.forward_indiv(x, loaded_params2)
+
+    test_noise(learned_h, learned_h2, args)
 
     # make nominal and safe HCBF-QP controllers
     # energy_ctrl = get_energy_controller(args.cg_params)

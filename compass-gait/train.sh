@@ -6,7 +6,7 @@ export TRAINING_DATA=./vary-hip-mass/all-trajs-shuffled.pkl
 export N_TRAIN_ROLLOUTS=500
 
 # directory to save all output plots and saved network parameters
-export RESULTS_DIR=./robust-results-hip-0.1
+export RESULTS_DIR=./tmp
 
 # Compass gait parameters
 export HIP_MASS=10.0                # kg
@@ -63,4 +63,4 @@ python3 core/train.py --neural-net-dims ${NET_DIMS[@]} --n-epochs $N_EPOCHS \
     --leg-mass $LEG_MASS --leg-length $LEG_LENGTH \
     --leg-cent-of-mass $LEG_CENTER_OF_MASS \
     --gravity $GRAVITY --slope $SLOPE \
-    --reload --reload-path robust-results-hip-0.1/trained_hcbf.npy
+    --reload --reload-path experiments/Jan-5-additive-noise/non-robust-results/trained_hcbf.npy

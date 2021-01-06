@@ -11,7 +11,7 @@ from cg_dynamics.dynamics import CG_Dynamics
 from make_ctrls import *
 
 
-def test_noise(learned_h, args):
+def test_noise(learned_h, robust_h, args):
     # noise_levels = [0.1, 0.2, 0.25, 0.3, 0.4]
     noise_levels = [0.5, 0.6, 0.7]
 
@@ -30,16 +30,20 @@ def test_noise(learned_h, args):
         'non-robust': make_safe_controller(no_ctrl, learned_h, args.cg_params)
     }
 
-    fnames = [f for f in os.listdir(root) if f.endswith('.pkl')]
-    dfs = [pd.read_pickle(os.path.join(root, f)) for f in fnames]
-    df = pd.concat(dfs, ignore_index=True)
-    df.to_pickle(os.path.join(root, 'heatmap_rollouts_all.pkl'))
+    # fnames = [f for f in os.listdir(root) if f.endswith('.pkl')]
+    # dfs = [pd.read_pickle(os.path.join(root, f)) for f in fnames]
+    # df = pd.concat(dfs, ignore_index=True)
+    # df.to_pickle(os.path.join(root, 'heatmap_rollouts_all.pkl'))
 
     # df.to_pickle('results/heatmap/heatmap-rollouts.pkl')
     # df = pd.read_pickle(os.path.join(root, 'heatmap_rollouts_all.pkl'))
 
+    df1 = pd.read_pickle('experiments/Jan-5-additive-noise/non-robust-results/heatmap/heatmap_rollouts_all.pkl')
+    df2 = pd.read_pickle('experiments/Jan-5-additive-noise/robust-results/heatmap/heatmap_rollouts_all.pkl')
+    df = pd.concat([df1, df2], ignore_index=True)
+
     # df = noisy_rollouts(ctrls, cg_envir, noise_levels, fname, num_trials=200)
-    plot_heatmap_noise(learned_h, df)
+    plot_heatmap_noise(learned_h, robust_h, df)
 
 
 def noisy_rollouts(ctrls, cg_envir, noise_levels, fname, success_n_steps=5, num_trials=5):
@@ -74,17 +78,20 @@ def noisy_rollouts(ctrls, cg_envir, noise_levels, fname, success_n_steps=5, num_
 
     return df
 
-def plot_heatmap_noise(learned_h, df):
+def plot_heatmap_noise(learned_h, robust_h, df):
 
     df['Num_steps'] = df['Num_steps'].clip(upper=12)
-    
+    df = df[df.Noise_level <= 0.4]
+    df = df.rename(columns={'Noise_level': 'Δ'})
+    df.Controller = df.Controller.str.capitalize()
 
     sns.set_style('whitegrid')
-    sns.set(font_scale=0.8, font='Palatino')
+    sns.set(font_scale=1.4)
 
     x = np.linspace(-0.3, 0.3, num=50)
     y = np.linspace(-2.6, -1.40, num=50)
     hvals1 = jax.vmap(lambda s1: jax.vmap(lambda s2: learned_h(jnp.array([0.0, s1, 0.4, s2])))(y))(x)
+    hvals2 = jax.vmap(lambda s1: jax.vmap(lambda s2: robust_h(jnp.array([0.0, s1, 0.4, s2])))(y))(x)
 
     def add_contour(ax, hvals, only_zero=False):
         levels = [0] if only_zero is True else 5
@@ -93,31 +100,35 @@ def plot_heatmap_noise(learned_h, df):
 
     def add_all_contours(grid):
         print(g.axes.shape)
-        safe_axes, energy_axes, zero_axes = g.axes
-        [add_contour(ax, hvals1, only_zero=False) for ax in safe_axes]
-        [add_contour(ax, hvals1, only_zero=True) for ax in energy_axes]
-        [add_contour(ax, hvals1, only_zero=True) for ax in zero_axes]
+        robust_axes, non_robust_axes, _, _ = g.axes
+        [add_contour(ax, hvals1, only_zero=False) for ax in non_robust_axes]
+        [add_contour(ax, hvals2, only_zero=False) for ax in robust_axes]
+        # [add_contour(ax, hvals1, only_zero=True) for ax in energy_axes]
+        # [add_contour(ax, hvals1, only_zero=True) for ax in zero_axes]
 
     kwargs = {'data': df, 'x': 'Theta_swing', 'y': 'Vel_swing',
-        'row': 'Controller', 'col': 'Noise_level', 'height': 2.5,
-        'row_order': ['non-robust', 'energy', 'zero']}
+        'row': 'Controller', 'col': 'Δ', 'height': 3,
+        'row_order': ['Robust', 'Non-robust', 'Energy', 'Zero']}
     
     # palette = sns.color_palette("rocket_r", as_cmap=True)
-    g = sns.relplot(hue='Success', **kwargs)
+    # g = sns.relplot(hue='Success', **kwargs)
     # add_all_contours(g)
+
+    # g.set(xlim=(-0.4, 0.4))
+    # g.set(ylim=(-2.7, -1.3))
+
+    palette = sns.color_palette('Spectral', 13)
+    g = sns.relplot(hue='Num_steps',palette=palette, legend=False, **kwargs)
+    g.set_titles("{row_name} | Δ={col_name}")
+    # plt.legend(loc='lower center', ncol=10)
+    # g._legend.set_title('Steps walked')
+    g.set_axis_labels(x_var="Swing angle", y_var="Swing velocity")
+    add_all_contours(g)
 
     g.set(xlim=(-0.4, 0.4))
     g.set(ylim=(-2.7, -1.3))
-    plt.savefig('success.png')
-
-    # palette = sns.color_palette('Spectral', 13)
-    g = sns.relplot(hue='Num_steps',palette=None, **kwargs)
-    # add_all_contours(g)
-
-    g.set(xlim=(-0.4, 0.4))
-    g.set(ylim=(-2.7, -1.3))
-    plt.savefig('num_steps.png')
-
-    # plt.tight_layout()
+    plt.gcf().subplots_adjust(bottom=0.05)
+    plt.tight_layout()
+    # plt.savefig('num_steps.png')
 
     plt.show()
